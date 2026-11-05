@@ -3,7 +3,7 @@
 A portable Windows utility for queuing region and full-screen captures and pasting them together.
 
 1. Run `QuickBatchSnip.exe`.
-2. Press **Win+S** to freeze the screen at its original brightness. Drag and release to queue a region, or click **Full screen** once or press **Enter** to queue all displays in one image. Press **Esc** to cancel. Repeat to queue more screenshots.
+2. Press **Win+S** to freeze and dim the screen. Drag and release to queue a region, or click **Full screen** once or press **Enter** to queue all displays in one image. The screenshots retain their original brightness. Press **Esc** to cancel. Repeat to queue more screenshots.
 3. Press **Ctrl+V** in the destination app. Apps that accept clipboard attachments receive separate PNGs. For apps that accept only one image, choose **Paste batch as one image** in the tray menu.
 
 Captures stay in memory until paste. The queue clears when an app reads the batch from the clipboard. Temporary attachment files are cleaned up after 10 minutes or when Quick Batch Snip exits.
@@ -12,7 +12,7 @@ Double-click the EXE to reopen the window while the utility is running. Quick Ba
 
 ## Start with Windows
 
-Turn on **Start with Windows** in the main window to create a shortcut in your Startup folder (`shell:startup`). The shortcut launches the current copy in the tray when you sign in. Turn the switch off to remove it. If you move the EXE, turn the switch off and back on to update the shortcut.
+Turn on **Start with Windows** in the main window to create a shortcut in your Startup folder (`shell:startup`). The shortcut opens the main window when you sign in. Choose **Hide to tray** to keep the app running in the background. Turn the switch off to remove the shortcut. If you move the EXE or download a newer copy, turn the switch off and back on to update the shortcut.
 
 If you upgraded from 1.4, turn the switch on once to replace its old startup entry. Windows also lets you manage startup apps under **Settings → Apps → Startup**.
 

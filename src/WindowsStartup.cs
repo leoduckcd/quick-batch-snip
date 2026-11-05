@@ -53,7 +53,7 @@ internal sealed class WindowsStartup
                 shortcut.TargetPath = exePath;
                 shortcut.Arguments = Argument;
                 shortcut.WorkingDirectory = Path.GetDirectoryName(exePath);
-                shortcut.Description = "Launch Quick Batch Snip in the tray";
+                shortcut.Description = "Open Quick Batch Snip when you sign in";
                 shortcut.Save();
                 return true;
             });

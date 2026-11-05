@@ -21,17 +21,16 @@ internal sealed class StatusWindow : Form
     private readonly WindowsStartup startup = new WindowsStartup(Application.ExecutablePath);
     private readonly Label count;
     private readonly StartupToggle startupToggle;
-    private readonly Label startupHint;
 
     internal StatusWindow(Icon icon, Action exit)
     {
         SuspendLayout();
-        Text = "Quick Batch Snip 1.5";
+        Text = "Quick Batch Snip 1.5.1";
         Icon = icon;
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
-        ClientSize = new Size(548, 463);
+        ClientSize = new Size(548, 473);
         BackColor = Surface;
         Font = body;
 
@@ -42,16 +41,15 @@ internal sealed class StatusWindow : Form
             Color.FromArgb(210, 229, 230), 165, 113));
         Controls.Add(hero);
 
-        Controls.Add(ShortcutCard(22, "Open capture", "Win", "S"));
-        Controls.Add(ShortcutCard(280, "Paste the batch", "Ctrl", "V"));
-        Controls.Add(MakeLabel("Drag to select a region, or press Enter to capture all displays.", body, Muted, 22, 307));
+        Controls.Add(ShortcutCard(22, "Open capture", "Win", "S", "Drag to select a region,\r\nor press Enter for all displays."));
+        Controls.Add(ShortcutCard(280, "Paste the batch", "Ctrl", "V", "Paste into the destination app."));
 
         var startupCard = new Card(Color.White, Border, 15)
         {
-            Bounds = new Rectangle(22, 334, 504, 60),
+            Bounds = new Rectangle(22, 344, 504, 60),
             TabIndex = 0
         };
-        startupToggle = new StartupToggle
+        startupToggle = new StartupToggle(small)
         {
             Name = "startupToggle",
             Text = "Start with Windows",
@@ -60,16 +58,11 @@ internal sealed class StatusWindow : Form
         };
         startupToggle.Click += delegate { UpdateStartupSetting(true); };
         startupCard.Controls.Add(startupToggle);
-        startupHint = MakeLabel("Launch in the tray when you sign in.", small, Muted, 16, 33);
-        startupHint.Cursor = Cursors.Hand;
-        startupHint.Click += delegate { UpdateStartupSetting(true); };
-        startupCard.Controls.Add(startupHint);
-        startupHint.BringToFront();
         Controls.Add(startupCard);
 
         var status = new Card(Color.FromArgb(222, 239, 233), Color.Empty, 15)
         {
-            Bounds = new Rectangle(22, 410, 209, 32)
+            Bounds = new Rectangle(22, 420, 209, 32)
         };
         var dot = MakeLabel("●", small, Color.FromArgb(21, 113, 81), 8, 0);
         dot.AutoSize = false;
@@ -85,7 +78,7 @@ internal sealed class StatusWindow : Form
 
         var hide = new DashboardButton("Hide to tray")
         {
-            Bounds = new Rectangle(339, 407, 113, 38),
+            Bounds = new Rectangle(339, 417, 113, 38),
             TabIndex = 1
         };
         hide.Click += delegate { Hide(); };
@@ -94,7 +87,7 @@ internal sealed class StatusWindow : Form
         var quit = new DashboardButton("Exit")
         {
             Name = "exitButton",
-            Bounds = new Rectangle(460, 407, 66, 38),
+            Bounds = new Rectangle(460, 417, 66, 38),
             TabIndex = 2
         };
         quit.Click += delegate { exit(); };
@@ -127,7 +120,7 @@ internal sealed class StatusWindow : Form
             else if (startupToggle.Checked && !startup.UsesThisCopy())
                 hint = "Turn off, then on to refresh this startup shortcut.";
             else
-                hint = "Launch in the tray when you sign in.";
+                hint = "Open this window when you sign in.";
         }
         catch (Exception ex)
         {
@@ -135,8 +128,8 @@ internal sealed class StatusWindow : Form
                 throw;
             hint = "Windows could not access the startup shortcut.";
         }
-        startupHint.Text = hint;
         startupToggle.AccessibleDescription = hint;
+        startupToggle.Invalidate();
     }
 
     protected override void OnFormClosing(FormClosingEventArgs e)
@@ -161,13 +154,14 @@ internal sealed class StatusWindow : Form
         }
     }
 
-    private Card ShortcutCard(int left, string title, string modifier, string key)
+    private Card ShortcutCard(int left, string title, string modifier, string key, string hint)
     {
-        var card = new Card(Color.White, Border, 15) { Bounds = new Rectangle(left, 208, 246, 88) };
+        var card = new Card(Color.White, Border, 15) { Bounds = new Rectangle(left, 208, 246, 124) };
         card.Controls.Add(MakeLabel(title, strong, Ink, 16, 12));
         card.Controls.Add(Keycap(modifier, 16, 47));
         card.Controls.Add(MakeLabel("+", body, Muted, 68, 48));
         card.Controls.Add(Keycap(key, 88, 31));
+        card.Controls.Add(MakeLabel(hint, small, Muted, 16, 80));
         return card;
     }
 
@@ -357,19 +351,26 @@ internal sealed class StatusWindow : Form
 
     private sealed class StartupToggle : CheckBox
     {
-        internal StartupToggle()
+        private readonly Font hintFont;
+
+        internal StartupToggle(Font hintFont)
         {
+            this.hintFont = hintFont;
             AutoCheck = false;
-            BackColor = Color.Transparent;
+            BackColor = Color.White;
             Cursor = Cursors.Hand;
             DoubleBuffered = true;
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
+            e.Graphics.Clear(BackColor);
             float scale = Height / 50f;
             TextRenderer.DrawText(e.Graphics, Text, Font, new Rectangle(0, 0, Width, (int)(28 * scale)),
                 Ink, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+            var hint = new Rectangle(0, (int)(26 * scale), Width - (int)(56 * scale), (int)(21 * scale));
+            TextRenderer.DrawText(e.Graphics, AccessibleDescription, hintFont, hint, Muted,
+                TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
 
             var track = new RectangleF(Width - 44 * scale, 13 * scale, 44 * scale, 24 * scale);
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;

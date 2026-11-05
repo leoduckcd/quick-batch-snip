@@ -15,8 +15,8 @@ using System.Windows.Forms;
 [assembly: AssemblyTitle("Quick Batch Snip")]
 [assembly: AssemblyProduct("Quick Batch Snip")]
 [assembly: AssemblyDescription("Portable Windows screenshot batch capture")]
-[assembly: AssemblyVersion("1.5.0.0")]
-[assembly: AssemblyFileVersion("1.5.0.0")]
+[assembly: AssemblyVersion("1.5.1.0")]
+[assembly: AssemblyFileVersion("1.5.1.0")]
 
 internal static class Program
 {
@@ -44,13 +44,12 @@ internal static class Program
             {
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
-                using (var app = new SnipApp(!startup))
+                using (var app = new SnipApp())
                     Application.Run(app);
             }
             catch (Win32Exception ex)
             {
-                if (!startup)
-                    MessageBox.Show(ex.Message, "Quick Batch Snip", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(ex.Message, "Quick Batch Snip", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
@@ -65,7 +64,7 @@ internal sealed class SnipApp : ApplicationContext
     internal const int CaptureMessage = 0x8001;
     internal const int PasteMessage = 0x8002;
     private const int ShowStatusMessage = 0x8003;
-    private const string WindowName = "QuickBatchSnip.69426C91.1.5";
+    private const string WindowName = "QuickBatchSnip.69426C91.1.5.1";
     private static readonly IntPtr MessageWindows = new IntPtr(-3);
     private readonly List<Screenshot> queue = new List<Screenshot>();
     private readonly List<ClipboardBatch> fileBatches = new List<ClipboardBatch>();
@@ -85,7 +84,7 @@ internal sealed class SnipApp : ApplicationContext
     private bool reopenStatus;
     private bool disposed;
 
-    public SnipApp(bool showWindow)
+    public SnipApp()
     {
         window = new SnipWindow(this);
         try { keyboard = new ShortcutHook(window.Handle); }
@@ -114,8 +113,7 @@ internal sealed class SnipApp : ApplicationContext
         timer.Tick += delegate { MaintainClipboard(); };
         timer.Start();
         ThreadPool.QueueUserWorkItem(delegate { ClipboardBatch.CleanStaleFiles(); });
-        if (showWindow)
-            ShowStatus();
+        ShowStatus();
     }
 
     internal static bool ShowRunningInstance()
@@ -524,8 +522,11 @@ internal sealed class SelectionOverlay : Form
     protected override void OnPaint(PaintEventArgs e)
     {
         e.Graphics.DrawImageUnscaled(frozen, Point.Empty);
+        using (var shade = new SolidBrush(Color.FromArgb(92, Color.Black)))
+            e.Graphics.FillRectangle(shade, ClientRectangle);
         if (!Selection.IsEmpty)
         {
+            e.Graphics.DrawImage(frozen, Selection, Selection, GraphicsUnit.Pixel);
             e.Graphics.DrawRectangle(Pens.Black, Selection.X, Selection.Y, Selection.Width - 1, Selection.Height - 1);
             if (Selection.Width > 2 && Selection.Height > 2)
                 e.Graphics.DrawRectangle(Pens.White, Selection.X + 1, Selection.Y + 1, Selection.Width - 3, Selection.Height - 3);
