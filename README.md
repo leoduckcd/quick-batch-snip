@@ -8,7 +8,13 @@ A portable Windows utility for capturing several screen regions and pasting them
 
 Captures stay in memory until paste. The queue clears when an app reads the batch from the clipboard. Temporary attachment files are cleaned up after 10 minutes or when Quick Batch Snip exits.
 
-Use **Start with Windows** in the main window to launch in the tray at sign-in. Double-click the EXE to reopen the window while the utility is running. Quick Batch Snip uses **Win+S** while it runs.
+Double-click the EXE to reopen the window while the utility is running. Quick Batch Snip uses **Win+S** while it runs.
+
+## Start with Windows
+
+Turn on **Start with Windows** in the main window to create a shortcut in your Startup folder (`shell:startup`). The shortcut launches the current copy in the tray when you sign in. Turn the switch off to remove it. If you move the EXE, turn the switch off and back on to update the shortcut.
+
+If you upgraded from 1.4, turn the switch on once to replace its old startup entry. Windows also lets you manage startup apps under **Settings → Apps → Startup**.
 
 ## Build
 

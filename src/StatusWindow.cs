@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Security;
 using System.Windows.Forms;
 
@@ -25,7 +26,7 @@ internal sealed class StatusWindow : Form
     internal StatusWindow(Icon icon, Action capture, Action exit)
     {
         SuspendLayout();
-        Text = "Quick Batch Snip 1.4";
+        Text = "Quick Batch Snip 1.4.1";
         Icon = icon;
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -128,26 +129,20 @@ internal sealed class StatusWindow : Form
         string hint;
         try
         {
-            string command = startup.ReadCommand();
-            if (toggle)
-            {
-                startup.SetEnabled(string.IsNullOrEmpty(command));
-                command = startup.ReadCommand();
-            }
-            startupToggle.Checked = !string.IsNullOrEmpty(command);
-            hint = startupToggle.Checked && !startup.UsesThisCopy(command)
-                ? "Set for another copy. Turn off, then on to use this one."
-                : "Launch in the tray when you sign in.";
-        }
-        catch (PathTooLongException)
-        {
-            hint = "Move this app to a shorter path to enable startup.";
+            bool legacyCleared = !toggle || startup.SetEnabled(!startup.Enabled);
+            startupToggle.Checked = startup.Enabled;
+            if (!legacyCleared)
+                hint = "Check for the old entry in Windows Startup settings.";
+            else if (startupToggle.Checked && !startup.UsesThisCopy())
+                hint = "Turn off, then on to refresh this startup shortcut.";
+            else
+                hint = "Launch in the tray when you sign in.";
         }
         catch (Exception ex)
         {
-            if (!(ex is IOException || ex is UnauthorizedAccessException || ex is SecurityException))
+            if (!(ex is IOException || ex is UnauthorizedAccessException || ex is SecurityException || ex is COMException))
                 throw;
-            hint = "Windows could not access the startup setting.";
+            hint = "Windows could not access the startup shortcut.";
         }
         startupHint.Text = hint;
         startupToggle.AccessibleDescription = hint;

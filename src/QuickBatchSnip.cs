@@ -15,8 +15,8 @@ using System.Windows.Forms;
 [assembly: AssemblyTitle("Quick Batch Snip")]
 [assembly: AssemblyProduct("Quick Batch Snip")]
 [assembly: AssemblyDescription("Portable Windows screenshot batch capture")]
-[assembly: AssemblyVersion("1.4.0.0")]
-[assembly: AssemblyFileVersion("1.4.0.0")]
+[assembly: AssemblyVersion("1.4.1.0")]
+[assembly: AssemblyFileVersion("1.4.1.0")]
 
 internal static class Program
 {
@@ -65,7 +65,7 @@ internal sealed class SnipApp : ApplicationContext
     internal const int CaptureMessage = 0x8001;
     internal const int PasteMessage = 0x8002;
     private const int ShowStatusMessage = 0x8003;
-    private const string WindowName = "QuickBatchSnip.69426C91.1.4";
+    private const string WindowName = "QuickBatchSnip.69426C91.1.4.1";
     private static readonly IntPtr MessageWindows = new IntPtr(-3);
     private readonly List<Screenshot> queue = new List<Screenshot>();
     private readonly List<ClipboardBatch> fileBatches = new List<ClipboardBatch>();
