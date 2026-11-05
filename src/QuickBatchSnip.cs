@@ -15,8 +15,8 @@ using System.Windows.Forms;
 [assembly: AssemblyTitle("Quick Batch Snip")]
 [assembly: AssemblyProduct("Quick Batch Snip")]
 [assembly: AssemblyDescription("Portable Windows screenshot batch capture")]
-[assembly: AssemblyVersion("1.4.1.0")]
-[assembly: AssemblyFileVersion("1.4.1.0")]
+[assembly: AssemblyVersion("1.5.0.0")]
+[assembly: AssemblyFileVersion("1.5.0.0")]
 
 internal static class Program
 {
@@ -65,7 +65,7 @@ internal sealed class SnipApp : ApplicationContext
     internal const int CaptureMessage = 0x8001;
     internal const int PasteMessage = 0x8002;
     private const int ShowStatusMessage = 0x8003;
-    private const string WindowName = "QuickBatchSnip.69426C91.1.4.1";
+    private const string WindowName = "QuickBatchSnip.69426C91.1.5";
     private static readonly IntPtr MessageWindows = new IntPtr(-3);
     private readonly List<Screenshot> queue = new List<Screenshot>();
     private readonly List<ClipboardBatch> fileBatches = new List<ClipboardBatch>();
@@ -74,7 +74,6 @@ internal sealed class SnipApp : ApplicationContext
     private readonly NotifyIcon tray;
     private readonly Icon icon;
     private readonly System.Windows.Forms.Timer timer;
-    private readonly System.Windows.Forms.Timer captureDelay;
     private readonly ContextMenuStrip menu;
     private readonly ToolStripMenuItem status;
     private readonly ToolStripMenuItem clear;
@@ -82,6 +81,7 @@ internal sealed class SnipApp : ApplicationContext
     private readonly StatusWindow dashboard;
     private ClipboardBatch activeBatch;
     private bool selecting;
+    private bool confirmingExit;
     private bool reopenStatus;
     private bool disposed;
 
@@ -103,9 +103,9 @@ internal sealed class SnipApp : ApplicationContext
         menu.Items.AddRange(new ToolStripItem[] {
             new ToolStripMenuItem("Open Quick Batch Snip", null, delegate { ShowStatus(); }),
             status, new ToolStripSeparator(), combine, clear,
-            new ToolStripMenuItem("Exit", null, delegate { ExitThread(); })
+            new ToolStripMenuItem("Exit", null, delegate { ConfirmExit(); })
         });
-        dashboard = new StatusWindow(icon, CaptureFromDashboard, ExitThread);
+        dashboard = new StatusWindow(icon, ConfirmExit);
         tray = new NotifyIcon { Icon = icon, ContextMenuStrip = menu, Visible = true };
         tray.MouseDoubleClick += delegate { ShowStatus(); };
         UpdateStatus();
@@ -113,8 +113,6 @@ internal sealed class SnipApp : ApplicationContext
         timer = new System.Windows.Forms.Timer { Interval = 500 };
         timer.Tick += delegate { MaintainClipboard(); };
         timer.Start();
-        captureDelay = new System.Windows.Forms.Timer { Interval = 180 };
-        captureDelay.Tick += delegate { Capture(); };
         ThreadPool.QueueUserWorkItem(delegate { ClipboardBatch.CleanStaleFiles(); });
         if (showWindow)
             ShowStatus();
@@ -143,7 +141,7 @@ internal sealed class SnipApp : ApplicationContext
     {
         if (disposed)
             return;
-        if (selecting || captureDelay.Enabled)
+        if (selecting)
         {
             reopenStatus = true;
             return;
@@ -159,16 +157,27 @@ internal sealed class SnipApp : ApplicationContext
         dashboard.Activate();
     }
 
-    private void CaptureFromDashboard()
+    private void ConfirmExit()
     {
-        dashboard.Hide();
-        captureDelay.Start();
+        if (confirmingExit)
+            return;
+
+        confirmingExit = true;
+        try
+        {
+            string message = "Exit Quick Batch Snip?";
+            if (queue.Count > 0)
+                message += "\r\n\r\nQueued screenshots will be cleared.";
+            if (MessageBox.Show(dashboard.Visible ? dashboard : null, message, "Quick Batch Snip",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) == DialogResult.Yes)
+                ExitThread();
+        }
+        finally { confirmingExit = false; }
     }
 
     internal void Capture()
     {
-        captureDelay.Stop();
-        if (selecting)
+        if (selecting || confirmingExit)
             return;
 
         selecting = true;
@@ -187,7 +196,11 @@ internal sealed class SnipApp : ApplicationContext
                     overlay.ShowDialog();
                     selection = overlay.Selection;
                 }
-                if (!selection.IsEmpty)
+                if (selection == new Rectangle(Point.Empty, frozen.Size))
+                {
+                    queue.Add(new Screenshot(frozen));
+                }
+                else if (!selection.IsEmpty)
                 {
                     using (Bitmap crop = frozen.Clone(selection, PixelFormat.Format24bppRgb))
                         queue.Add(new Screenshot(crop));
@@ -369,7 +382,6 @@ internal sealed class SnipApp : ApplicationContext
         {
             disposed = true;
             timer.Dispose();
-            captureDelay.Dispose();
             keyboard.Dispose();
             ClearQueue();
             foreach (ClipboardBatch batch in fileBatches)
@@ -421,6 +433,7 @@ internal sealed class SelectionOverlay : Form
 {
     private readonly Bitmap frozen;
     private readonly Rectangle screenBounds;
+    private readonly FlowLayoutPanel prompt;
     private Point anchor;
     private bool dragging;
     private bool wasActivated;
@@ -438,6 +451,56 @@ internal sealed class SelectionOverlay : Form
         DoubleBuffered = true;
         Cursor = Cursors.Cross;
         Bounds = screenBounds;
+
+        prompt = new FlowLayoutPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            WrapContents = false,
+            BackColor = Color.FromArgb(242, 250, 247),
+            BorderStyle = BorderStyle.FixedSingle,
+            Padding = new Padding(8, 5, 8, 5),
+            Font = SystemFonts.MessageBoxFont
+        };
+        prompt.MouseDown += BeginDragFromPrompt;
+        prompt.Controls.Add(PromptLabel("Drag to select a region"));
+        var fullScreen = new Button
+        {
+            Name = "fullScreenButton",
+            Text = "Full screen (Enter)",
+            AutoSize = true,
+            MinimumSize = new Size(0, 28),
+            BackColor = Color.FromArgb(150, 242, 202),
+            ForeColor = Color.FromArgb(12, 73, 56),
+            FlatStyle = FlatStyle.Flat,
+            Cursor = Cursors.Hand,
+            UseVisualStyleBackColor = false
+        };
+        fullScreen.FlatAppearance.BorderColor = Color.FromArgb(91, 162, 137);
+        fullScreen.Click += delegate { CaptureFullScreen(); };
+        prompt.Controls.Add(fullScreen);
+        prompt.Controls.Add(PromptLabel("Esc to cancel"));
+        Controls.Add(prompt);
+        AcceptButton = fullScreen;
+    }
+
+    private Label PromptLabel(string text)
+    {
+        var label = new Label
+        {
+            Text = text,
+            AutoSize = true,
+            ForeColor = Color.FromArgb(21, 43, 51),
+            Margin = new Padding(6, 9, 6, 3)
+        };
+        label.MouseDown += BeginDragFromPrompt;
+        return label;
+    }
+
+    private void BeginDragFromPrompt(object sender, MouseEventArgs e)
+    {
+        Point point = PointToClient(((Control)sender).PointToScreen(e.Location));
+        OnMouseDown(new MouseEventArgs(e.Button, e.Clicks, point.X, point.Y, e.Delta));
     }
 
     protected override void OnHandleCreated(EventArgs e)
@@ -447,15 +510,25 @@ internal sealed class SelectionOverlay : Form
             screenBounds.Width, screenBounds.Height, 0x0214); // no owner order, activate or z order
     }
 
+    protected override void OnLoad(EventArgs e)
+    {
+        base.OnLoad(e);
+        Rectangle monitor = Rectangle.Intersect(screenBounds, Screen.FromPoint(Cursor.Position).WorkingArea);
+        if (monitor.IsEmpty)
+            monitor = screenBounds;
+        Size size = prompt.GetPreferredSize(Size.Empty);
+        prompt.Location = new Point(monitor.Left - screenBounds.Left + Math.Max(0, (monitor.Width - size.Width) / 2),
+            monitor.Top - screenBounds.Top + 12);
+    }
+
     protected override void OnPaint(PaintEventArgs e)
     {
         e.Graphics.DrawImageUnscaled(frozen, Point.Empty);
-        using (var shade = new SolidBrush(Color.FromArgb(92, Color.Black)))
-            e.Graphics.FillRectangle(shade, ClientRectangle);
         if (!Selection.IsEmpty)
         {
-            e.Graphics.DrawImage(frozen, Selection, Selection, GraphicsUnit.Pixel);
-            e.Graphics.DrawRectangle(Pens.White, Selection.X, Selection.Y, Selection.Width - 1, Selection.Height - 1);
+            e.Graphics.DrawRectangle(Pens.Black, Selection.X, Selection.Y, Selection.Width - 1, Selection.Height - 1);
+            if (Selection.Width > 2 && Selection.Height > 2)
+                e.Graphics.DrawRectangle(Pens.White, Selection.X + 1, Selection.Y + 1, Selection.Width - 3, Selection.Height - 3);
         }
     }
 
@@ -473,6 +546,7 @@ internal sealed class SelectionOverlay : Form
             anchor = e.Location;
             dragging = true;
             Capture = true;
+            prompt.Hide();
         }
     }
 
@@ -491,18 +565,24 @@ internal sealed class SelectionOverlay : Form
         dragging = false;
         Capture = false;
         if (Selection.IsEmpty)
-            return;
-
-        DialogResult = DialogResult.OK;
-        Close();
+            prompt.Show();
+        else
+            FinishSelection(Selection);
     }
 
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
     {
-        if ((keyData & Keys.KeyCode) != Keys.Escape)
-            return base.ProcessCmdKey(ref msg, keyData);
-        Cancel();
-        return true;
+        if (keyData == Keys.Enter)
+        {
+            CaptureFullScreen();
+            return true;
+        }
+        if ((keyData & Keys.KeyCode) == Keys.Escape)
+        {
+            Cancel();
+            return true;
+        }
+        return base.ProcessCmdKey(ref msg, keyData);
     }
 
     protected override void OnActivated(EventArgs e)
@@ -522,6 +602,18 @@ internal sealed class SelectionOverlay : Form
     {
         Selection = Rectangle.Empty;
         DialogResult = DialogResult.Cancel;
+        Close();
+    }
+
+    private void CaptureFullScreen()
+    {
+        FinishSelection(new Rectangle(Point.Empty, frozen.Size));
+    }
+
+    private void FinishSelection(Rectangle area)
+    {
+        Selection = area;
+        DialogResult = DialogResult.OK;
         Close();
     }
 

@@ -1,14 +1,14 @@
 # Quick Batch Snip
 
-A portable Windows utility for capturing several screen regions and pasting them together.
+A portable Windows utility for queuing region and full-screen captures and pasting them together.
 
 1. Run `QuickBatchSnip.exe`.
-2. Press **Win+S** and drag to select an area of the frozen screen. Press **Esc** to cancel. Repeat to queue more screenshots.
+2. Press **Win+S** to freeze the screen at its original brightness. Drag and release to queue a region, or click **Full screen** once or press **Enter** to queue all displays in one image. Press **Esc** to cancel. Repeat to queue more screenshots.
 3. Press **Ctrl+V** in the destination app. Apps that accept clipboard attachments receive separate PNGs. For apps that accept only one image, choose **Paste batch as one image** in the tray menu.
 
 Captures stay in memory until paste. The queue clears when an app reads the batch from the clipboard. Temporary attachment files are cleaned up after 10 minutes or when Quick Batch Snip exits.
 
-Double-click the EXE to reopen the window while the utility is running. Quick Batch Snip uses **Win+S** while it runs.
+Double-click the EXE to reopen the window while the utility is running. Quick Batch Snip uses **Win+S** while it runs. Choose **Exit** in the main window or tray menu, then confirm to stop the app.
 
 ## Start with Windows
 

@@ -23,42 +23,33 @@ internal sealed class StatusWindow : Form
     private readonly StartupToggle startupToggle;
     private readonly Label startupHint;
 
-    internal StatusWindow(Icon icon, Action capture, Action exit)
+    internal StatusWindow(Icon icon, Action exit)
     {
         SuspendLayout();
-        Text = "Quick Batch Snip 1.4.1";
+        Text = "Quick Batch Snip 1.5";
         Icon = icon;
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
-        ClientSize = new Size(548, 497);
+        ClientSize = new Size(548, 463);
         BackColor = Surface;
         Font = body;
 
         var hero = new Hero { Bounds = new Rectangle(22, 20, 504, 176) };
         hero.Controls.Add(MakeLabel("PORTABLE SCREENSHOT TOOL", small, Accent, 165, 40));
         hero.Controls.Add(MakeLabel("Quick Batch Snip", heading, Color.White, 162, 60));
-        hero.Controls.Add(MakeLabel("Capture regions and paste them together.", body,
+        hero.Controls.Add(MakeLabel("Queue screenshots and paste them together.", body,
             Color.FromArgb(210, 229, 230), 165, 113));
         Controls.Add(hero);
 
-        Controls.Add(ShortcutCard(22, "Capture a region", "Win", "S"));
+        Controls.Add(ShortcutCard(22, "Open capture", "Win", "S"));
         Controls.Add(ShortcutCard(280, "Paste the batch", "Ctrl", "V"));
-
-        var take = new DashboardButton("Take screenshot", true)
-        {
-            Name = "captureButton",
-            Font = strong,
-            Bounds = new Rectangle(22, 309, 504, 46),
-            TabIndex = 0
-        };
-        take.Click += delegate { capture(); };
-        Controls.Add(take);
+        Controls.Add(MakeLabel("Drag to select a region, or press Enter to capture all displays.", body, Muted, 22, 307));
 
         var startupCard = new Card(Color.White, Border, 15)
         {
-            Bounds = new Rectangle(22, 368, 504, 60),
-            TabIndex = 1
+            Bounds = new Rectangle(22, 334, 504, 60),
+            TabIndex = 0
         };
         startupToggle = new StartupToggle
         {
@@ -78,7 +69,7 @@ internal sealed class StatusWindow : Form
 
         var status = new Card(Color.FromArgb(222, 239, 233), Color.Empty, 15)
         {
-            Bounds = new Rectangle(22, 444, 209, 32)
+            Bounds = new Rectangle(22, 410, 209, 32)
         };
         var dot = MakeLabel("●", small, Color.FromArgb(21, 113, 81), 8, 0);
         dot.AutoSize = false;
@@ -92,23 +83,23 @@ internal sealed class StatusWindow : Form
         status.Controls.Add(count);
         Controls.Add(status);
 
-        var hide = new DashboardButton("Hide to tray", false)
+        var hide = new DashboardButton("Hide to tray")
         {
-            Bounds = new Rectangle(339, 441, 113, 38),
-            TabIndex = 2
+            Bounds = new Rectangle(339, 407, 113, 38),
+            TabIndex = 1
         };
         hide.Click += delegate { Hide(); };
         Controls.Add(hide);
 
-        var quit = new DashboardButton("Exit", false)
+        var quit = new DashboardButton("Exit")
         {
-            Bounds = new Rectangle(460, 441, 66, 38),
-            TabIndex = 3
+            Name = "exitButton",
+            Bounds = new Rectangle(460, 407, 66, 38),
+            TabIndex = 2
         };
         quit.Click += delegate { exit(); };
         Controls.Add(quit);
 
-        AcceptButton = take;
         AutoScaleDimensions = new SizeF(96, 96);
         AutoScaleMode = AutoScaleMode.Dpi;
         ResumeLayout(true);
@@ -318,12 +309,10 @@ internal sealed class StatusWindow : Form
 
     private sealed class DashboardButton : Button
     {
-        private readonly bool primary;
         private bool hovered;
 
-        internal DashboardButton(string text, bool primary)
+        internal DashboardButton(string text)
         {
-            this.primary = primary;
             Text = text;
             Cursor = Cursors.Hand;
             FlatStyle = FlatStyle.Flat;
@@ -349,19 +338,16 @@ internal sealed class StatusWindow : Form
         {
             e.Graphics.Clear(Surface);
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            Color fill = primary
-                ? (hovered ? Color.FromArgb(130, 230, 187) : Accent)
-                : (hovered ? Color.FromArgb(224, 235, 236) : Color.White);
-            Color edge = primary ? Color.FromArgb(130, 220, 183) : Border;
+            Color fill = hovered ? Color.FromArgb(224, 235, 236) : Color.White;
             using (GraphicsPath shape = Rounded(new RectangleF(0.5f, 0.5f, Width - 1, Height - 1),
                 11 * e.Graphics.DpiX / 96))
             using (var brush = new SolidBrush(fill))
-            using (var pen = new Pen(edge))
+            using (var pen = new Pen(Border))
             {
                 e.Graphics.FillPath(brush, shape);
                 e.Graphics.DrawPath(pen, shape);
             }
-            TextRenderer.DrawText(e.Graphics, Text, Font, ClientRectangle, primary ? AccentInk : Ink,
+            TextRenderer.DrawText(e.Graphics, Text, Font, ClientRectangle, Ink,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
 
             if (Focused && ShowFocusCues)
